@@ -13,7 +13,7 @@ const tallyBookData = [
                 heading: "Introduction to Digital Accounting",
                 text: "Tally Prime is a smart digital accountant. In the old days, shopkeepers used big red notebooks (Khatas) to write down who bought what and who paid how much. Tally replaces those notebooks. It automatically calculates your profits, tracks your stock, and generates GST bills instantly without you doing any math!",
                 shortcut: "Tally is 90% keyboard-based. The mouse is rarely needed!",
-                imgSrc: "images/tally-01-intro.jpg"
+                imgSrc: "images/tally-01-intro.png"
             },
             {
                 heading: "The Tally Prime 7.0 Interface",
