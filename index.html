@@ -1,6 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+        // Universal Gatekeeper Script
+        if (localStorage.getItem('excellent_auth') !== 'true') {
+            document.addEventListener("DOMContentLoaded", function() {
+                document.body.style.visibility = "hidden"; 
+                document.body.style.overflow = "hidden";
+                
+                const lockDiv = document.createElement('div');
+                lockDiv.style.cssText = "position:fixed; top:0; left:0; width:100vw; height:100vh; background:#0f172a; z-index:9999999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; font-family:'Inter', sans-serif; visibility:visible;";
+                
+                lockDiv.innerHTML = `
+                    <div style="background:#1e293b; padding:40px; border-radius:12px; text-align:center; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); border: 1px solid #334155; max-width:90%; width:400px;">
+                        <h2 style="margin-bottom:10px; color:#10b981; font-size:1.8rem;">Restricted Access 🛡️</h2>
+                        <p style="color:#94a3b8; margin-bottom:25px; line-height:1.5;">This portal is strictly for registered students of Excellent Institute.</p>
+                        
+                        <input type="email" id="authEmail" placeholder="Enter Authorized Email" style="width:100%; padding:14px; margin-bottom:20px; border-radius:8px; border:2px solid #334155; background:#0f172a; color:white; text-align:center; outline:none; font-size:1.1rem; transition: border-color 0.2s;">
+                        
+                        <button onclick="verifyAccess()" style="width:100%; padding:14px; background:#10b981; color:white; border:none; border-radius:8px; font-size:1.1rem; font-weight:bold; cursor:pointer; transition: background 0.2s;">
+                            Verify Connection
+                        </button>
+                        
+                        <div id="authError" style="display:none; background-color: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; padding: 15px; border-radius: 8px; color:#fca5a5; margin-top:20px; font-weight:600; line-height:1.5;">
+                            ❌ Access Denied.<br><br>Please use the Excellent Institute mobile APK to view this content.
+                        </div>
+                    </div>
+                `;
+                document.documentElement.appendChild(lockDiv);
+
+                window.verifyAccess = function() {
+                    const emailInput = document.getElementById('authEmail').value.toLowerCase().trim();
+                    const inputBox = document.getElementById('authEmail');
+                    
+                    if (emailInput === 'excellent.institut@gmail.com') { 
+                        localStorage.setItem('excellent_auth', 'true');
+                        lockDiv.remove();
+                        document.body.style.visibility = "visible";
+                        document.body.style.overflow = "auto";
+                    } else {
+                        document.getElementById('authError').style.display = "block";
+                        inputBox.style.borderColor = "#ef4444";
+                    }
+                };
+            });
+        }
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Excellent Institute - Tally Prime 7.0 Masterclass</title>
@@ -320,7 +365,7 @@
         <!-- Sidebar -->
         <div class="sidebar" id="main-sidebar">
             <div class="nav-label">Course Chapters</div>
-            <button class="nav-btn active" onclick="loadDashboard()" id="home-btn">🏠 Book Cover</button>
+            <button class="nav-btn active" onclick="loadDashboard()" id="home-btn">🏠 Dashboard</button>
             <div id="nav-container" style="display: flex; flex-direction: column; gap: 6px;">
                 <!-- JavaScript will inject chapter buttons here -->
             </div>
@@ -346,8 +391,9 @@
         const contentDisplay = document.getElementById('content-display');
         const sidebar = document.getElementById('main-sidebar');
         
-        // Global Lock Variable for Advanced Tally Modules
-        let isAdvancedUnlocked = false; 
+        // --- SMART DUAL-LOCK VARIABLES ---
+        let isDcaUnlocked = false;   // Unlocks Ch 1-6
+        let isPgdcaUnlocked = false; // Unlocks Ch 1-12 (Everything)
 
         // 1. Initialize Application
         function initApp() {
@@ -361,9 +407,13 @@
                 const btn = document.createElement('button');
                 btn.className = 'nav-btn note-nav-btn';
                 
-                let displayIcon = '📒';
-                // Lock Chapters 6 through 10 (Indices 5 to 9)
-                if (index >= 5 && !isAdvancedUnlocked) displayIcon = '🔒';
+                let displayIcon = '🔒';
+                
+                // If either DCA or PGDCA is unlocked, show book for Ch 1-6
+                if (index < 6 && (isDcaUnlocked || isPgdcaUnlocked)) displayIcon = '📒';
+                
+                // If PGDCA is unlocked, show book for Ch 7-12
+                if (index >= 6 && isPgdcaUnlocked) displayIcon = '📒';
                 
                 btn.innerHTML = `${displayIcon} ${chapter.title.split(':')[0]}`; 
                 
@@ -418,13 +468,22 @@
             // Generate a card for every chapter
             if (typeof tallyBookData !== 'undefined') {
                 tallyBookData.forEach((chapter, index) => {
-                    // Logic to visually lock the advanced cards
-                    let isLocked = (index >= 5 && !isAdvancedUnlocked);
-                    let icon = isLocked ? '🔒' : '📒';
                     
+                    let isLocked = true;
+                    // Foundation checks
+                    if (index < 6 && (isDcaUnlocked || isPgdcaUnlocked)) isLocked = false;
+                    // Advanced checks
+                    if (index >= 6 && isPgdcaUnlocked) isLocked = false;
+
+                    let icon = isLocked ? '🔒' : '📒';
                     let lockedText = '';
+                    
                     if (isLocked) {
-                        lockedText = '<span style="color:#ef4444; font-size:0.9rem;"> (Locked)</span>';
+                        if (index < 6) {
+                            lockedText = '<span style="color:#ef4444; font-size:0.9rem;"> (DCA / PGDCA Locked)</span>';
+                        } else {
+                            lockedText = '<span style="color:#8b5cf6; font-size:0.9rem;"> (PGDCA Exclusive)</span>';
+                        }
                     }
                     
                     html += `
@@ -446,22 +505,22 @@
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             if(clickedBtn) clickedBtn.classList.add('active');
 
-            // --- Advanced Tally Lock (Chapters 6 to 10) ---
-            if (index >= 5 && !isAdvancedUnlocked) {
+            // --- FOUNDATION LOCK (Chapters 1 to 6) ---
+            if (index < 6 && !isDcaUnlocked && !isPgdcaUnlocked) {
                 let lockHtml = `
                 <div class="content-wrapper allow-select" style="text-align: center; padding: 80px 20px;">
                     <div style="font-size: 5rem; margin-bottom: 10px;">🔒</div>
-                    <h2 style="color: var(--primary); font-size: 2rem;">Advanced Modules Locked</h2>
-                    <p style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 25px;">Please enter the DCA or PGDCA password to access GST, Payroll, and Security Settings.</p>
+                    <h2 style="color: var(--primary); font-size: 2rem;">Foundation Modules Locked</h2>
+                    <p style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 25px;">Please enter your DCA or PGDCA password to access GST Billing, Ledgers, and Reports.</p>
                     
-                    <input type="password" id="unlockPass" placeholder="Password" style="padding: 12px; font-size: 1.2rem; border: 2px solid var(--border); border-radius: 8px; width: 100%; max-width: 250px; text-align: center; outline: none;">
+                    <input type="password" id="foundationPass" placeholder="Password" style="padding: 12px; font-size: 1.2rem; border: 2px solid var(--primary); border-radius: 8px; width: 100%; max-width: 250px; text-align: center; outline: none;">
                     <br><br>
                     
-                    <button onclick="checkPassword(${index})" style="background-color: var(--primary); color: white; border: none; padding: 12px 40px; font-size: 1.1rem; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: var(--shadow-md);">
+                    <button onclick="checkFoundationPassword(${index})" style="background-color: var(--primary); color: white; border: none; padding: 12px 40px; font-size: 1.1rem; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: var(--shadow-md);">
                         Unlock 🔓
                     </button>
                     
-                    <p id="wrong-pass-msg" style="color: #ef4444; font-weight: bold; margin-top: 15px; display: none;">❌ Incorrect Password!</p>
+                    <p id="wrong-found-msg" style="color: #ef4444; font-weight: bold; margin-top: 15px; display: none;">❌ Incorrect Password!</p>
                 </div>`;
                 
                 contentDisplay.innerHTML = lockHtml;
@@ -470,20 +529,41 @@
                 return; 
             }
 
-            const chapter = tallyBookData[index];
+            // --- ADVANCED PGDCA LOCK (Chapters 7 to 12) ---
+            if (index >= 6 && !isPgdcaUnlocked) {
+                let lockHtml = `
+                <div class="content-wrapper allow-select" style="text-align: center; padding: 80px 20px;">
+                    <div style="font-size: 5rem; margin-bottom: 10px;">🔒</div>
+                    <h2 style="color: #8b5cf6; font-size: 2rem;">Advanced Modules Locked</h2>
+                    <p style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 25px;">This section is restricted to the PGDCA syllabus. Enter the PGDCA password to access Advanced Payroll, GST Returns, and Data Security.</p>
+                    
+                    <input type="password" id="advancedPass" placeholder="Password" style="padding: 12px; font-size: 1.2rem; border: 2px dashed #8b5cf6; border-radius: 8px; width: 100%; max-width: 250px; text-align: center; outline: none;">
+                    <br><br>
+                    
+                    <button onclick="checkAdvancedPassword(${index})" style="background-color: #8b5cf6; color: white; border: none; padding: 12px 40px; font-size: 1.1rem; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: var(--shadow-md);">
+                        Unlock 🔓
+                    </button>
+                    
+                    <p id="wrong-adv-msg" style="color: #ef4444; font-weight: bold; margin-top: 15px; display: none;">❌ Access Denied! PGDCA Password Required.</p>
+                </div>`;
+                
+                contentDisplay.innerHTML = lockHtml;
+                contentDisplay.scrollTop = 0;
+                if(window.innerWidth <= 768) sidebar.classList.add('collapsed');
+                return; 
+            }
 
-            // Build HTML for the Chapter
+            // --- Render the Actual Content ---
+            const chapter = tallyBookData[index];
             let htmlContent = `
             <div class="content-wrapper">
                 <div class="note-section allow-select">
                     <h1>${chapter.title}</h1>`;
             
-            // Loop through all the topics inside this chapter
             chapter.topics.forEach(topic => {
                 htmlContent += `<h3>${topic.heading}</h3>`;
                 htmlContent += `<p>${topic.text}</p>`;
                 
-                // Add Shortcut formatting if it exists
                 if(topic.shortcut) {
                     htmlContent += `
                     <div class="shortcut-box">
@@ -506,26 +586,48 @@
             }
         }
 
-        // 6. Unified Password Verification
-        function checkPassword(index) {
-            // Converts input to uppercase so "dca" or "DCA" both work
-            const input = document.getElementById('unlockPass').value.trim().toUpperCase(); 
+        // 6a. Verify Foundation Password (DCA or PGDCA accepted)
+        function checkFoundationPassword(index) {
+            const input = document.getElementById('foundationPass').value.trim().toUpperCase(); 
             
-            if (input === "DCA" || input === "PGDCA") {
-                isAdvancedUnlocked = true;
-                
-                // Instantly turn 🔒 into 📒 for chapters 6 to 10
-                document.querySelectorAll('.note-nav-btn').forEach((btn, i) => {
-                    if (i >= 5) {
-                        btn.innerHTML = btn.innerHTML.replace('🔒', '📒');
-                    }
-                });
-                
-                const btn = document.querySelectorAll('.note-nav-btn')[index];
-                loadContent(index, btn); // Reload the chapter
+            if (input === "DCA") {
+                isDcaUnlocked = true;
+                updateSidebarIcons();
+                loadContent(index, document.querySelectorAll('.note-nav-btn')[index]); 
+            } else if (input === "PGDCA") {
+                isPgdcaUnlocked = true; // PGDCA is the master key
+                isDcaUnlocked = true;
+                updateSidebarIcons();
+                loadContent(index, document.querySelectorAll('.note-nav-btn')[index]); 
             } else {
-                document.getElementById('wrong-pass-msg').style.display = 'block';
+                document.getElementById('wrong-found-msg').style.display = 'block';
             }
+        }
+
+        // 6b. Verify Advanced Password (ONLY PGDCA accepted)
+        function checkAdvancedPassword(index) {
+            const input = document.getElementById('advancedPass').value.trim().toUpperCase(); 
+            
+            if (input === "PGDCA") {
+                isPgdcaUnlocked = true;
+                isDcaUnlocked = true; // Master key automatically unlocks lower levels
+                updateSidebarIcons();
+                loadContent(index, document.querySelectorAll('.note-nav-btn')[index]); 
+            } else {
+                document.getElementById('wrong-adv-msg').style.display = 'block';
+            }
+        }
+
+        // Helper to refresh the sidebar padlocks after unlocking
+        function updateSidebarIcons() {
+            document.querySelectorAll('.note-nav-btn').forEach((btn, i) => {
+                if (i < 6 && (isDcaUnlocked || isPgdcaUnlocked)) {
+                    btn.innerHTML = btn.innerHTML.replace('🔒', '📒');
+                }
+                if (i >= 6 && isPgdcaUnlocked) {
+                    btn.innerHTML = btn.innerHTML.replace('🔒', '📒');
+                }
+            });
         }
 
         // 7. Zoomable Lightbox Logic
